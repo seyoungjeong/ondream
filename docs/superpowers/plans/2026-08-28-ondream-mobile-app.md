@@ -1071,6 +1071,33 @@ git add mobile
 git commit -m "chore: configure eas build for android and ios"
 ```
 
+- [ ] **Step 6: Build for the iOS Simulator and verify the real splash/icon there too**
+
+Expo Go's generic loading screen (not our real splash) is the only thing verified on iOS so far. An iOS *device* build needs a paid Apple Developer account, but an iOS *Simulator* build does not — add a `simulator` flag to the `preview` profile in `mobile/eas.json`:
+
+```json
+{
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    }
+  }
+}
+```
+
+Then run:
+
+```bash
+eas build --platform ios --profile preview
+```
+
+When it finishes, download the resulting `.app`/simulator build and install it on the booted iOS Simulator: `xcrun simctl install booted <path-to-app>`, then launch it (via the Simulator's home screen, or `xcrun simctl launch booted <bundle-id>`). Force-quit and relaunch to see a fresh cold start. Confirm the real ON-mark logo appears on the splash screen with a white background, matching what Android's real build already showed — not Expo Go's generic blue-arrow placeholder.
+
+Commit any `eas.json` change from this step separately: `git add mobile/eas.json && git commit -m "chore: enable ios simulator builds in eas preview profile"`.
+
 ---
 
 ## Future Work (not in this plan)
