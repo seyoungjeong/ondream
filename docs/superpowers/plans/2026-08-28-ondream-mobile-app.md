@@ -179,7 +179,10 @@ const Tab = createBottomTabNavigator();
 export default function RootTabs() {
   return (
     <NavigationContainer>
-      <Tab.Navigator screenOptions={{ headerShown: false, tabBarIcon: () => null }}>
+      <Tab.Navigator
+        screenOptions={{ headerShown: false, tabBarIcon: () => null }}
+        detachInactiveScreens={false}
+      >
         <Tab.Screen name="Account" component={AccountScreen} options={{ tabBarLabel: '나의 ON드림' }} />
         <Tab.Screen name="Notices" component={NoticesScreen} options={{ tabBarLabel: '공지사항' }} />
         <Tab.Screen name="Board" component={BoardScreen} options={{ tabBarLabel: '게시판' }} />
@@ -192,6 +195,8 @@ export default function RootTabs() {
 ```
 
 Route `name` values (`Notices`, `Board`, `FAQ`, `Counseling`, `Account`) are internal identifiers used by the navigator and by later tasks/tests — they stay in English. `tabBarLabel` controls what the user actually sees and must be Korean.
+
+**Why `detachInactiveScreens={false}`:** live testing on a real iOS build (not Expo Go) found switching tabs sometimes showed the previous tab's content, the wrong tab's content, or a stale login screen instead of that tab's real page. React Navigation's tab navigator detaches inactive screens' native views by default to save memory; WebView-backed screens (WKWebView on iOS in particular) can fail to redraw correctly when their native view is reattached after being detached, showing a stale frame until something forces a redraw. Disabling detachment keeps every tab's WebView's native view alive and correctly composited at all times — a standard, documented fix for this exact WebView-in-tab-navigator symptom, at the cost of slightly higher memory use (acceptable for 5 tabs).
 
 **Why `Account` is first and labeled 나의 ON드림 (not 마이페이지):** the account/dashboard tab is the default tab shown on launch (React Navigation selects the first `Tab.Screen` by default), and its real URL (`SECTION_URLS.account`, the site's root-adjacent login/dashboard flow) already adapts automatically — anonymous visitors see the login screen, authenticated visitors land in their dashboard — so it functions as the app's true home/landing screen without needing a separate 홈 tab. The label matches the real website's own top-nav text for this section ("나의 ON드림"), not an app-invented name.
 
