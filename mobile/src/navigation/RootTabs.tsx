@@ -13,11 +13,11 @@ export default function RootTabs() {
   return (
     <NavigationContainer>
       <Tab.Navigator screenOptions={{ headerShown: false, tabBarIcon: () => null }}>
+        <Tab.Screen name="Account" component={AccountScreen} options={{ tabBarLabel: '나의 ON드림' }} />
         <Tab.Screen name="Notices" component={NoticesScreen} options={{ tabBarLabel: '공지사항' }} />
         <Tab.Screen name="Board" component={BoardScreen} options={{ tabBarLabel: '게시판' }} />
         <Tab.Screen name="FAQ" component={FaqScreen} options={{ tabBarLabel: '자주 묻는 질문' }} />
         <Tab.Screen name="Counseling" component={CounselingScreen} options={{ tabBarLabel: '상담' }} />
-        <Tab.Screen name="My Account" component={AccountScreen} options={{ tabBarLabel: '마이페이지' }} />
       </Tab.Navigator>
     </NavigationContainer>
   );
