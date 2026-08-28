@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { getErrorMessage } from '../webview/errorMessage';
@@ -31,19 +31,27 @@ export default function WebViewScreen({ url }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => webviewRef.current?.goBack()}
-          disabled={!canGoBack}
-          testID="webview-back-button"
-        >
-          <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>뒤로</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleHome} testID="webview-home-button">
-          <Text style={styles.headerButton}>홈</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
-          <Text style={styles.headerButton}>새로고침</Text>
-        </TouchableOpacity>
+        <Image
+          source={require('../../assets/header-logo.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+          testID="webview-header-logo"
+        />
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => webviewRef.current?.goBack()}
+            disabled={!canGoBack}
+            testID="webview-back-button"
+          >
+            <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>뒤로</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleHome} testID="webview-home-button">
+            <Text style={styles.headerButton}>홈</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
+            <Text style={styles.headerButton}>새로고침</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <WebView
@@ -88,9 +96,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  headerLogo: { width: 88, height: 24 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   headerButton: { fontSize: 16, color: '#007AFF' },
   headerButtonDisabled: { color: '#C7C7CC' },
   errorText: { fontSize: 16, textAlign: 'center', marginBottom: 16 },

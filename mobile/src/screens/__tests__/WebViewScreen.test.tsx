@@ -50,4 +50,10 @@ describe('WebViewScreen', () => {
     expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
     expect(mockInjectJavaScript.mock.calls[0][0]).toContain('https://example.com/section');
   });
+
+  it('shows the header logo', async () => {
+    const { getByTestId } = await render(<WebViewScreen url="https://example.com" />);
+
+    expect(getByTestId('webview-header-logo')).toBeTruthy();
+  });
 });
