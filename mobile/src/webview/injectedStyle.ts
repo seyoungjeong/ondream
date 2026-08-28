@@ -32,11 +32,15 @@ export const FIX_MYPAGE_LAYOUT_JS = `
     var nav = document.querySelector('.mypage_header nav ul');
     if (nav) {
       nav.style.display = 'flex';
-      nav.style.flexWrap = 'wrap';
-      nav.style.gap = '12px 16px';
+      nav.style.flexWrap = 'nowrap';
+      nav.style.overflowX = 'auto';
+      nav.style.gap = '20px';
+      nav.style.paddingBottom = '8px';
+      nav.style.setProperty('-webkit-overflow-scrolling', 'touch');
     }
     document.querySelectorAll('.mypage_header nav li').forEach(function (li) {
       li.style.marginTop = '0';
+      li.style.flexShrink = '0';
     });
     var body = document.querySelector('.mypage_body');
     if (body) {
