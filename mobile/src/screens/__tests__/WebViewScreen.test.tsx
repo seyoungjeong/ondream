@@ -2,7 +2,12 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import WebViewScreen from '../WebViewScreen';
 
+jest.mock('@react-navigation/native', () => ({
+  useIsFocused: () => true,
+}));
+
 let capturedOnError: ((event: any) => void) | undefined;
+let capturedOnNavigationStateChange: ((event: any) => void) | undefined;
 let mockReload = jest.fn();
 let mockInjectJavaScript = jest.fn();
 
@@ -10,6 +15,7 @@ jest.mock('react-native-webview', () => {
   const RN = require('react');
   const MockWebView = RN.forwardRef((props: any, ref: any) => {
     capturedOnError = props.onError;
+    capturedOnNavigationStateChange = props.onNavigationStateChange;
     RN.useImperativeHandle(ref, () => ({
       reload: mockReload,
       goBack: jest.fn(),
@@ -55,5 +61,16 @@ describe('WebViewScreen', () => {
 
     expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
     expect(mockInjectJavaScript.mock.calls[0][0]).toContain('https://ondream.co.kr/member/logout');
+  });
+
+  it('redirects to the account url when the webview bounces to the bare homepage', async () => {
+    const { } = await render(<WebViewScreen url="https://example.com" />);
+
+    await act(async () => {
+      capturedOnNavigationStateChange?.({ url: 'https://ondream.co.kr/', canGoBack: false });
+    });
+
+    expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
+    expect(mockInjectJavaScript.mock.calls[0][0]).toContain('https://ondream.co.kr/member/login');
   });
 });

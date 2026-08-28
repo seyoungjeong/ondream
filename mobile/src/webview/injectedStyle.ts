@@ -17,9 +17,9 @@ export const HIDE_CHROME_JS = `
 // desktop sidebar layout (.mypage_header, 240px) next to a content
 // column (.mypage_body) with no responsive breakpoint for narrow
 // screens, so the sidebar's menu items overflow and get cut off.
-// Override it to a single stacked column with the menu wrapping
-// instead of overflowing. No-op (every querySelector finds nothing)
-// on pages that don't have this layout.
+// Override it to a single row with the menu scrolling horizontally
+// instead of overflowing/cutting off. No-op (every querySelector
+// finds nothing) on pages that don't have this layout.
 export const FIX_MYPAGE_LAYOUT_JS = `
   (function () {
     var section = document.querySelector('.mypage_section');
