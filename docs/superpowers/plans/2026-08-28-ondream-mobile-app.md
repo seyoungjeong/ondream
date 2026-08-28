@@ -366,11 +366,15 @@ git commit -m "feat: add section urls and webview error message mapping"
 `mobile/src/webview/injectedStyle.ts`:
 
 ```typescript
-// Hides the website's own header/footer/nav since the app's tab bar
-// already provides navigation.
+// Hides the website's own top header/footer since the app's tab bar
+// already provides navigation. Deliberately does NOT target `nav`
+// directly: the site's own top-level nav is nested inside `header`
+// (hidden along with it), but pages like the account dashboard have
+// their own unrelated `nav` elements for in-page content (e.g. the
+// dashboard's sidebar menu) that must stay visible and usable.
 export const HIDE_CHROME_JS = `
   (function () {
-    document.querySelectorAll('header, footer, nav').forEach(function (el) {
+    document.querySelectorAll('header, footer').forEach(function (el) {
       el.style.display = 'none';
     });
   })();
@@ -593,7 +597,7 @@ const styles = StyleSheet.create({
 
 **Why there's a 홈 (home) button:** the chrome-hiding script hides the real website's own header, which normally contains the clickable logo that navigates back to a section's starting page. Without a native equivalent, once a user navigates into a sub-page there is no way back except stepping through browser history one page at a time via 뒤로. `handleHome` uses `injectJavaScript` to run `window.location.href = <the tab's original url>` inside the existing WebView instance — this returns to that tab's starting page without unmounting/remounting the WebView (same reasoning as the retry fix above: never rely on replacing the WebView to change what it shows).
 
-**Why `onLoadEnd` re-injects `HIDE_CHROME_JS`:** the `injectedJavaScript` prop only reliably reapplies after every navigation on Android — on iOS (WKWebView) it only fires on the WebView's very first page load. Without this, any subsequent navigation within the same WebView (opening a notice, a login redirect, following a link) leaves the real site's own header/footer/nav visible again, duplicated below the app's native header. Re-running the same script imperatively from `onLoadEnd` makes it reapply after every page load on both platforms; it's idempotent (hiding already-hidden elements is a no-op) so this is safe to call after every load, not just the first.
+**Why `onLoadEnd` re-injects `HIDE_CHROME_JS`:** the `injectedJavaScript` prop only reliably reapplies after every navigation on Android — on iOS (WKWebView) it only fires on the WebView's very first page load. Without this, any subsequent navigation within the same WebView (opening a notice, a login redirect, following a link) leaves the real site's own header visible again, duplicated below the app's native header. Re-running the same script imperatively from `onLoadEnd` makes it reapply after every page load on both platforms; it's idempotent (hiding an already-hidden element is a no-op) so this is safe to call after every load, not just the first.
 
 **Why there's a header logo:** chrome-hiding is not fully reliable across in-page navigations (confirmed during live testing — the site's own header briefly reappears after certain redirects, inconsistently between iOS and Android). Rather than depend on that script working every time, the app shows its own ON드림 wordmark logo natively at the top-left of every WebView-backed screen's header, matching the real site's own header placement, so branding is consistent on both platforms regardless of what the injected script does or doesn't hide. The logo asset (`mobile/assets/header-logo.png`) is the real wordmark extracted from the live site's own header logo SVG (`https://ondream.co.kr/images/logo/header_logo.svg`, full lockup this time, not just the icon-only crop used for the app icon), rasterized at 660x180 with a transparent background — already prepared at `/tmp/ondream-wordmark.png`, ready to copy into place.
 
