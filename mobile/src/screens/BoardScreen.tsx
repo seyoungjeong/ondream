@@ -4,7 +4,7 @@ import { View, Text } from 'react-native';
 export default function BoardScreen() {
   return (
     <View>
-      <Text>Board</Text>
+      <Text>게시판</Text>
     </View>
   );
 }

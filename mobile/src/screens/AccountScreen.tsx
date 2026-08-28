@@ -4,7 +4,7 @@ import { View, Text } from 'react-native';
 export default function AccountScreen() {
   return (
     <View>
-      <Text>My Account</Text>
+      <Text>마이페이지</Text>
     </View>
   );
 }
