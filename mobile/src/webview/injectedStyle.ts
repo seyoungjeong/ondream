@@ -46,3 +46,26 @@ export const FIX_MYPAGE_LAYOUT_JS = `
   })();
   true;
 `;
+
+// Suppresses window.alert() popups whose message is about login state
+// (e.g. "이미 로그인 중입니다" when revisiting the login page while already
+// authenticated, or "로그인이 필요합니다" when a page requires login).
+// Every observed case is immediately followed by a redirect that fully
+// explains what happened, so the native alert dialog is just an
+// unnecessary interruption, not a loss of information. Only messages
+// containing "로그인" are suppressed -- other alerts (e.g. form
+// validation) still show normally. Must run via
+// injectedJavaScriptBeforeContentLoaded, not the regular
+// injectedJavaScript prop: the site's own alert() calls fire as soon as
+// its scripts execute, before injectedJavaScript's post-load timing
+// would have a chance to override window.alert.
+export const SUPPRESS_LOGIN_ALERTS_JS = `
+  var nativeAlert = window.alert;
+  window.alert = function (message) {
+    if (typeof message === 'string' && message.indexOf('로그인') !== -1) {
+      return;
+    }
+    return nativeAlert(message);
+  };
+  true;
+`;
