@@ -859,9 +859,18 @@ git commit -m "feat: wire webview content into notices, board, faq, and account 
 **Interfaces:**
 - None — this task only changes app metadata and static assets.
 
-- [ ] **Step 1: Collect brand assets**
+- [ ] **Step 1: Place the brand assets**
 
-Open `https://www.ondream.co.kr/` in a desktop browser, open dev tools, and inspect the header/logo to find the primary brand color hex code and save the site's logo image. Save the logo as `mobile/assets/icon.png` (1024x1024, add padding if needed so the logo isn't cropped) and reuse it (or a simplified version) for `mobile/assets/splash.png`.
+The real brand assets have already been sourced and prepared (extracted from the live site's own header logo at `https://ondream.co.kr/images/logo/header_logo.svg`, which is an SVG combining a colored "ON" mark — yellow `#FFD600`, green `#36CC5D`, blue `#199DFC` — with a black "Dream" wordmark; the "ON" mark alone was cropped out, since the full wide lockup doesn't suit a square app icon, and rasterized cleanly at 1024x1024 on a white background). The site's own CSS also confirms `#00B935` as its most-used non-neutral color, i.e. its primary UI green (buttons, active states) — distinct from the logo's own `#36CC5D` green accent.
+
+Copy the two prepared PNGs into place:
+
+```bash
+cp /tmp/ondream-icon-1024.png mobile/assets/icon.png
+cp /tmp/ondream-splash-1024.png mobile/assets/splash.png
+```
+
+If either source file is missing, they can be regenerated: extract the SVG at `https://ondream.co.kr/images/logo/header_logo.svg`, keep only the first `<path>` (yellow smile) and the two `<g style="mix-blend-mode:multiply">` groups (green/blue circles) — drop everything after that (the black "Dream" text paths) — set `viewBox="0 0 41 36"`, then rasterize with ImageMagick: `magick -density 600 -background white icon-mark.svg -resize 640x640 -gravity center -background white -extent 1024x1024 icon.png` (use `-resize 400x400` instead of `640x640` for the splash version, for more padding).
 
 - [ ] **Step 2: Update app.json**
 
@@ -880,8 +889,6 @@ In `mobile/app.json`, set:
   }
 }
 ```
-
-Replace `"#FFFFFF"` with the hex code found in Step 1.
 
 - [ ] **Step 3: Manually verify**
 
