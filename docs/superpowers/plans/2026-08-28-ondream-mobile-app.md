@@ -474,32 +474,32 @@ export default function WebViewScreen({ url }: Props) {
         </TouchableOpacity>
       </View>
 
-      {errorMessage ? (
-        <View style={styles.centered}>
+      <WebView
+        ref={webviewRef}
+        source={{ uri: url }}
+        injectedJavaScript={HIDE_CHROME_JS}
+        onNavigationStateChange={handleNavigationStateChange}
+        onLoadStart={() => setLoading(true)}
+        onLoadEnd={() => setLoading(false)}
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          setErrorMessage(getErrorMessage({ code: nativeEvent.code, description: nativeEvent.description }));
+        }}
+        onHttpError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          setErrorMessage(
+            getErrorMessage({ code: nativeEvent.statusCode, description: String(nativeEvent.statusCode) })
+          );
+        }}
+      />
+
+      {errorMessage && (
+        <View style={styles.errorOverlay}>
           <Text style={styles.errorText}>{errorMessage}</Text>
           <TouchableOpacity onPress={handleRetry} testID="webview-retry-button">
             <Text style={styles.retryButton}>다시 시도</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <WebView
-          ref={webviewRef}
-          source={{ uri: url }}
-          injectedJavaScript={HIDE_CHROME_JS}
-          onNavigationStateChange={handleNavigationStateChange}
-          onLoadStart={() => setLoading(true)}
-          onLoadEnd={() => setLoading(false)}
-          onError={(syntheticEvent) => {
-            const { nativeEvent } = syntheticEvent;
-            setErrorMessage(getErrorMessage({ code: nativeEvent.code, description: nativeEvent.description }));
-          }}
-          onHttpError={(syntheticEvent) => {
-            const { nativeEvent } = syntheticEvent;
-            setErrorMessage(
-              getErrorMessage({ code: nativeEvent.statusCode, description: String(nativeEvent.statusCode) })
-            );
-          }}
-        />
       )}
 
       {loading && !errorMessage && (
@@ -521,9 +521,19 @@ const styles = StyleSheet.create({
   },
   headerButton: { fontSize: 16, color: '#007AFF' },
   headerButtonDisabled: { color: '#C7C7CC' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   errorText: { fontSize: 16, textAlign: 'center', marginBottom: 16 },
   retryButton: { fontSize: 16, color: '#007AFF', fontWeight: '600' },
+  errorOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+  },
   loadingOverlay: {
     position: 'absolute',
     top: 0,
@@ -535,6 +545,8 @@ const styles = StyleSheet.create({
   },
 });
 ```
+
+**Why the WebView stays mounted:** if `<WebView>` were conditionally replaced by the error view (as an earlier draft of this plan did), `webviewRef.current` would go null while the error is showing, and the retry button's `webviewRef.current?.reload()` would silently no-op. Keeping `<WebView>` always mounted and overlaying the error UI on top (same pattern as the loading overlay) keeps the ref valid so retry actually works.
 
 - [ ] **Step 5: Run the test and verify it passes**
 
