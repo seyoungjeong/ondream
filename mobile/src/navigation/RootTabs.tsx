@@ -12,7 +12,7 @@ const Tab = createBottomTabNavigator();
 export default function RootTabs() {
   return (
     <NavigationContainer>
-      <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Navigator screenOptions={{ headerShown: false, tabBarIcon: () => null }}>
         <Tab.Screen name="Notices" component={NoticesScreen} options={{ tabBarLabel: '공지사항' }} />
         <Tab.Screen name="Board" component={BoardScreen} options={{ tabBarLabel: '게시판' }} />
         <Tab.Screen name="FAQ" component={FaqScreen} options={{ tabBarLabel: '자주 묻는 질문' }} />
