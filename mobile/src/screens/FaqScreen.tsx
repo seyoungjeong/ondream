@@ -1,10 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import WebViewScreen from './WebViewScreen';
+import { SECTION_URLS } from '../constants/urls';
 
 export default function FaqScreen() {
-  return (
-    <View>
-      <Text>자주 묻는 질문</Text>
-    </View>
-  );
+  return <WebViewScreen url={SECTION_URLS.faq} />;
 }

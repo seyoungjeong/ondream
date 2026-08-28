@@ -1,10 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import WebViewScreen from './WebViewScreen';
+import { SECTION_URLS } from '../constants/urls';
 
 export default function BoardScreen() {
-  return (
-    <View>
-      <Text>게시판</Text>
-    </View>
-  );
+  return <WebViewScreen url={SECTION_URLS.board} />;
 }

@@ -1,10 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import WebViewScreen from './WebViewScreen';
+import { SECTION_URLS } from '../constants/urls';
 
 export default function AccountScreen() {
-  return (
-    <View>
-      <Text>마이페이지</Text>
-    </View>
-  );
+  return <WebViewScreen url={SECTION_URLS.account} />;
 }
