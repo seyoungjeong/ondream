@@ -42,15 +42,6 @@ describe('WebViewScreen', () => {
     expect(mockReload).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates back to the starting url when the home button is pressed', async () => {
-    const { getByTestId } = await render(<WebViewScreen url="https://example.com/section" />);
-
-    await fireEvent.press(getByTestId('webview-home-button'));
-
-    expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
-    expect(mockInjectJavaScript.mock.calls[0][0]).toContain('https://example.com/section');
-  });
-
   it('shows the header logo', async () => {
     const { getByTestId } = await render(<WebViewScreen url="https://example.com" />);
 

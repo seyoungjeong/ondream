@@ -24,10 +24,6 @@ export default function WebViewScreen({ url }: Props) {
     webviewRef.current?.reload();
   }
 
-  function handleHome() {
-    webviewRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(url)}; true;`);
-  }
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -44,9 +40,6 @@ export default function WebViewScreen({ url }: Props) {
             testID="webview-back-button"
           >
             <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>뒤로</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleHome} testID="webview-home-button">
-            <Text style={styles.headerButton}>홈</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
             <Text style={styles.headerButton}>새로고침</Text>
