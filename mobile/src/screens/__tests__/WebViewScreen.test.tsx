@@ -4,6 +4,7 @@ import WebViewScreen from '../WebViewScreen';
 
 let capturedOnError: ((event: any) => void) | undefined;
 let mockReload = jest.fn();
+let mockInjectJavaScript = jest.fn();
 
 jest.mock('react-native-webview', () => {
   const RN = require('react');
@@ -12,6 +13,7 @@ jest.mock('react-native-webview', () => {
     RN.useImperativeHandle(ref, () => ({
       reload: mockReload,
       goBack: jest.fn(),
+      injectJavaScript: mockInjectJavaScript,
     }));
     return null;
   });
@@ -21,6 +23,7 @@ jest.mock('react-native-webview', () => {
 describe('WebViewScreen', () => {
   beforeEach(() => {
     mockReload = jest.fn();
+    mockInjectJavaScript = jest.fn();
   });
 
   it('shows the error message and a working retry button after a load failure', async () => {
@@ -37,5 +40,14 @@ describe('WebViewScreen', () => {
     await fireEvent.press(getByTestId('webview-retry-button'));
 
     expect(mockReload).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates back to the starting url when the home button is pressed', async () => {
+    const { getByTestId } = await render(<WebViewScreen url="https://example.com/section" />);
+
+    await fireEvent.press(getByTestId('webview-home-button'));
+
+    expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
+    expect(mockInjectJavaScript.mock.calls[0][0]).toContain('https://example.com/section');
   });
 });
