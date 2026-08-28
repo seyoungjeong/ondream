@@ -431,6 +431,12 @@ describe('WebViewScreen', () => {
     expect(injectJavaScriptMock).toHaveBeenCalledTimes(1);
     expect(injectJavaScriptMock.mock.calls[0][0]).toContain('https://example.com/section');
   });
+
+  it('shows the header logo', () => {
+    const { getByTestId } = render(<WebViewScreen url="https://example.com" />);
+
+    expect(getByTestId('webview-header-logo')).toBeTruthy();
+  });
 });
 ```
 
@@ -448,7 +454,7 @@ Expected: FAIL — `WebViewScreen.tsx` does not exist yet.
 
 ```tsx
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { getErrorMessage } from '../webview/errorMessage';
@@ -480,19 +486,27 @@ export default function WebViewScreen({ url }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => webviewRef.current?.goBack()}
-          disabled={!canGoBack}
-          testID="webview-back-button"
-        >
-          <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>뒤로</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleHome} testID="webview-home-button">
-          <Text style={styles.headerButton}>홈</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
-          <Text style={styles.headerButton}>새로고침</Text>
-        </TouchableOpacity>
+        <Image
+          source={require('../../assets/header-logo.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+          testID="webview-header-logo"
+        />
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => webviewRef.current?.goBack()}
+            disabled={!canGoBack}
+            testID="webview-back-button"
+          >
+            <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>뒤로</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleHome} testID="webview-home-button">
+            <Text style={styles.headerButton}>홈</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
+            <Text style={styles.headerButton}>새로고침</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <WebView
@@ -537,9 +551,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  headerLogo: { width: 88, height: 24 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   headerButton: { fontSize: 16, color: '#007AFF' },
   headerButtonDisabled: { color: '#C7C7CC' },
   errorText: { fontSize: 16, textAlign: 'center', marginBottom: 16 },
@@ -570,6 +587,8 @@ const styles = StyleSheet.create({
 **Why the WebView stays mounted:** if `<WebView>` were conditionally replaced by the error view (as an earlier draft of this plan did), `webviewRef.current` would go null while the error is showing, and the retry button's `webviewRef.current?.reload()` would silently no-op. Keeping `<WebView>` always mounted and overlaying the error UI on top (same pattern as the loading overlay) keeps the ref valid so retry actually works.
 
 **Why there's a 홈 (home) button:** the chrome-hiding script hides the real website's own header, which normally contains the clickable logo that navigates back to a section's starting page. Without a native equivalent, once a user navigates into a sub-page there is no way back except stepping through browser history one page at a time via 뒤로. `handleHome` uses `injectJavaScript` to run `window.location.href = <the tab's original url>` inside the existing WebView instance — this returns to that tab's starting page without unmounting/remounting the WebView (same reasoning as the retry fix above: never rely on replacing the WebView to change what it shows).
+
+**Why there's a header logo:** chrome-hiding is not fully reliable across in-page navigations (confirmed during live testing — the site's own header briefly reappears after certain redirects, inconsistently between iOS and Android). Rather than depend on that script working every time, the app shows its own ON드림 wordmark logo natively at the top-left of every WebView-backed screen's header, matching the real site's own header placement, so branding is consistent on both platforms regardless of what the injected script does or doesn't hide. The logo asset (`mobile/assets/header-logo.png`) is the real wordmark extracted from the live site's own header logo SVG (`https://ondream.co.kr/images/logo/header_logo.svg`, full lockup this time, not just the icon-only crop used for the app icon), rasterized at 660x180 with a transparent background — already prepared at `/tmp/ondream-wordmark.png`, ready to copy into place.
 
 - [ ] **Step 5: Run the test and verify it passes**
 
