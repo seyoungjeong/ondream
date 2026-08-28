@@ -382,6 +382,40 @@ export const HIDE_CHROME_JS = `
   })();
   true;
 `;
+
+// The account/dashboard pages (.mypage_section) use a fixed-width
+// desktop sidebar layout (.mypage_header, 240px) next to a content
+// column (.mypage_body) with no responsive breakpoint for narrow
+// screens, so the sidebar's menu items overflow and get cut off.
+// Override it to a single stacked column with the menu wrapping
+// instead of overflowing. No-op (every querySelector finds nothing)
+// on pages that don't have this layout.
+export const FIX_MYPAGE_LAYOUT_JS = `
+  (function () {
+    var section = document.querySelector('.mypage_section');
+    if (section) { section.style.display = 'block'; }
+    var header = document.querySelector('.mypage_header');
+    if (header) {
+      header.style.width = '100%';
+      header.style.minWidth = '0';
+    }
+    var nav = document.querySelector('.mypage_header nav ul');
+    if (nav) {
+      nav.style.display = 'flex';
+      nav.style.flexWrap = 'wrap';
+      nav.style.gap = '12px 16px';
+    }
+    document.querySelectorAll('.mypage_header nav li').forEach(function (li) {
+      li.style.marginTop = '0';
+    });
+    var body = document.querySelector('.mypage_body');
+    if (body) {
+      body.style.width = '100%';
+      body.style.paddingLeft = '0';
+    }
+  })();
+  true;
+`;
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -457,7 +491,7 @@ import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { getErrorMessage } from '../webview/errorMessage';
-import { HIDE_CHROME_JS } from '../webview/injectedStyle';
+import { HIDE_CHROME_JS, FIX_MYPAGE_LAYOUT_JS } from '../webview/injectedStyle';
 
 type Props = {
   url: string;
@@ -504,12 +538,13 @@ export default function WebViewScreen({ url }: Props) {
       <WebView
         ref={webviewRef}
         source={{ uri: url }}
-        injectedJavaScript={HIDE_CHROME_JS}
+        injectedJavaScript={HIDE_CHROME_JS + FIX_MYPAGE_LAYOUT_JS}
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => {
           setLoading(false);
           webviewRef.current?.injectJavaScript(HIDE_CHROME_JS);
+          webviewRef.current?.injectJavaScript(FIX_MYPAGE_LAYOUT_JS);
         }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
@@ -582,6 +617,8 @@ const styles = StyleSheet.create({
 **Why the WebView stays mounted:** if `<WebView>` were conditionally replaced by the error view (as an earlier draft of this plan did), `webviewRef.current` would go null while the error is showing, and the retry button's `webviewRef.current?.reload()` would silently no-op. Keeping `<WebView>` always mounted and overlaying the error UI on top (same pattern as the loading overlay) keeps the ref valid so retry actually works.
 
 **Why there's no 홈 (home) button:** an earlier version of this plan added one (returning to a tab's starting page via `injectJavaScript`), to work around the chrome-hiding script removing the site's own clickable logo. It was removed after live testing: with the account/dashboard tab now the app's default first tab (see Task 2), and 뒤로 already covering in-tab back-navigation, a separate home button was judged redundant. `webviewRef.current?.injectJavaScript` is still used elsewhere in this component (re-applying `HIDE_CHROME_JS` on every page load, see below) — only the home-button-specific call was removed.
+
+**Why `FIX_MYPAGE_LAYOUT_JS` exists:** fetched the real authenticated dashboard HTML/CSS and found `.mypage_section` is a fixed two-column desktop layout (`.mypage_header` sidebar pinned to 240px, `.mypage_body` content taking the remainder) with no responsive breakpoint — on a phone-width WebView the sidebar's menu items get cut off with no way to reach items past what fits (심리 검사, 내 정보 수정 had no other path). This is a real gap in the site's own mobile support, not something introduced by this app; the fix overrides the layout to a single stacked column with the menu wrapping instead of overflowing. Injected and re-injected alongside `HIDE_CHROME_JS` (same reasoning: `injectedJavaScript` alone doesn't reliably reapply across navigations on iOS).
 
 **Why `onLoadEnd` re-injects `HIDE_CHROME_JS`:** the `injectedJavaScript` prop only reliably reapplies after every navigation on Android — on iOS (WKWebView) it only fires on the WebView's very first page load. Without this, any subsequent navigation within the same WebView (opening a notice, a login redirect, following a link) leaves the real site's own header visible again, duplicated below the app's native header. Re-running the same script imperatively from `onLoadEnd` makes it reapply after every page load on both platforms; it's idempotent (hiding an already-hidden element is a no-op) so this is safe to call after every load, not just the first.
 
