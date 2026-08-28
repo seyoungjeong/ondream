@@ -22,6 +22,59 @@
 
 ---
 
+## Post-implementation fix: enable real type-checking for test files
+
+The final whole-branch review found `npx tsc --noEmit` failing with 49 errors — every test file errors on `describe`/`it`/`expect`/`jest` being unresolved, because `@types/jest` isn't auto-included by this TypeScript version without an explicit `types` array. Jest itself passes because Babel strips types without checking them, so this was invisible in every task's "tests passing" verification — `tsc` was simply never run. App code itself type-checks clean; this is test-file-only.
+
+Fix: in `mobile/tsconfig.json`, add a `types` array to `compilerOptions`:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "types": ["jest", "node"]
+  }
+}
+```
+
+(An earlier task briefly added `"types": ["jest", "@types/jest"]` and was told to revert it as unnecessary scope creep — that ruling was correct given what was known then, but the entry itself was also wrong: `"@types/jest"` is not a valid `types` array value, only the package's short name `"jest"` is. `"node"` is added too since app code doesn't reference Node types directly but Jest's ambient types pull in some.)
+
+Also add a `typecheck` script to `mobile/package.json`'s `scripts`: `"typecheck": "tsc --noEmit"` — nothing currently runs `tsc` as part of any task's verification, so add this so it can be.
+
+Verify: `npx tsc --noEmit` from `mobile/` produces zero errors. `npm test` should still pass unaffected (Jest's behavior doesn't change).
+
+---
+
+## Post-implementation fix: Android launcher icon still shows Expo's default
+
+The final whole-branch review found the Android app's actual home-screen launcher icon is still Expo's default blue-arrow placeholder, not the ON드림 logo. Task 7 replaced `mobile/assets/icon.png` and `mobile/assets/splash.png`, but Android's launcher icon is controlled separately by `expo.android.adaptiveIcon` in `app.json`, which still points at the untouched scaffold defaults (`android-icon-foreground.png` — the placeholder blue arrow; `android-icon-background.png` — a placeholder alignment-guide grid). Confirmed directly: both files still carry their original scaffold timestamps, never modified.
+
+A real, prepared foreground asset (the same ON-mark used for `icon.png`, re-rendered with more padding for Android's adaptive-icon safe zone — adaptive icons get cropped to a circle/squircle/rounded-square depending on the launcher, so the visible mark needs to sit well inside the crop) is ready at `/tmp/ondream-android-foreground.png` (1024x1024, transparent background).
+
+Fix:
+
+1. Copy the prepared asset into place: `cp /tmp/ondream-android-foreground.png mobile/assets/android-icon-foreground.png`
+2. In `mobile/app.json`, simplify the `android.adaptiveIcon` block to just a foreground + solid background color (dropping the unused, still-default `backgroundImage`/`monochromeImage` scaffold placeholders rather than also replacing those):
+
+```json
+"android": {
+  "adaptiveIcon": {
+    "backgroundColor": "#FFFFFF",
+    "foregroundImage": "./assets/android-icon-foreground.png"
+  },
+  "predictiveBackGestureEnabled": false,
+  "package": "kr.co.ondream.app"
+}
+```
+
+3. `mobile/assets/android-icon-background.png` and `mobile/assets/android-icon-monochrome.png` become unused — leave them in place (deleting unused scaffold assets is out of scope for this fix) but they're no longer referenced from `app.json`.
+
+If regeneration is ever needed: reuse `icon-mark.svg` from the Task 7 fix (the cropped ON-mark-only SVG, not the full wordmark), and rasterize with more padding than the app icon: `magick -density 600 -background none icon-mark.svg -resize 380x380 -gravity center -background none -extent 1024x1024 android-foreground.png` (note `-resize 380x380`, smaller than the app icon's `640x640`, and `-background none` on both the initial render and the extent step, to produce a transparent PNG rather than a white one — Android composites the `backgroundColor` behind it).
+
+Verify: this requires a real EAS build to actually see the launcher icon (Expo Go can't show it, same limitation as the splash screen). Run a fresh `eas build --platform android --profile preview`, install the resulting APK, and confirm the app's icon in the Android home screen/app drawer shows the real ON mark, not the default arrow.
+
+---
+
 ## Task 1: Scaffold the Expo app
 
 **Files:**
@@ -1102,6 +1155,141 @@ eas build --platform ios --profile preview
 When it finishes, download the resulting `.app`/simulator build and install it on the booted iOS Simulator: `xcrun simctl install booted <path-to-app>`, then launch it (via the Simulator's home screen, or `xcrun simctl launch booted <bundle-id>`). Force-quit and relaunch to see a fresh cold start. Confirm the real ON-mark logo appears on the splash screen with a white background, matching what Android's real build already showed — not Expo Go's generic blue-arrow placeholder.
 
 Commit any `eas.json` change from this step separately: `git add mobile/eas.json && git commit -m "chore: enable ios simulator builds in eas preview profile"`.
+
+---
+
+## Post-implementation fix: WebViewScreen overlay scoping, error recovery, login UX, Android back button
+
+The final whole-branch review found four related issues in `mobile/src/screens/WebViewScreen.tsx` and `mobile/src/webview/injectedStyle.ts`. Fixing them together since they touch the same two files.
+
+**1. The loading/error overlays cover the native header, not just the WebView.** Both overlays are `position: 'absolute'` with `top/left/right/bottom: 0`, but their parent is the same `SafeAreaView` that also contains the header — so `top: 0` means the very top of the screen, covering 뒤로/새로고침/로그아웃 too. While any page is loading, the header is completely unresponsive; during an error, only 다시 시도 is reachable.
+
+Fix: wrap `<WebView>` and both overlays in their own container `View`, separate from the header, so `top/left/right/bottom: 0` only spans that container:
+
+```tsx
+<SafeAreaView style={styles.container} edges={['top']}>
+  <View style={styles.header}>
+    {/* unchanged: logo, headerActions with 뒤로/새로고침/로그아웃 */}
+  </View>
+
+  <View style={styles.webviewContainer}>
+    <WebView
+      ref={webviewRef}
+      source={{ uri: url }}
+      injectedJavaScript={HIDE_CHROME_JS + FIX_MYPAGE_LAYOUT_JS}
+      injectedJavaScriptBeforeContentLoaded={SUPPRESS_LOGIN_ALERTS_JS}
+      onNavigationStateChange={handleNavigationStateChange}
+      onLoadStart={() => {
+        setLoading(true);
+        setErrorMessage(null);
+      }}
+      onLoadEnd={() => {
+        setLoading(false);
+        webviewRef.current?.injectJavaScript(HIDE_CHROME_JS);
+        webviewRef.current?.injectJavaScript(FIX_MYPAGE_LAYOUT_JS);
+      }}
+      onError={(syntheticEvent) => {
+        const { nativeEvent } = syntheticEvent;
+        setErrorMessage(getErrorMessage({ code: nativeEvent.code, description: nativeEvent.description }));
+      }}
+      onHttpError={(syntheticEvent) => {
+        const { nativeEvent } = syntheticEvent;
+        setErrorMessage(
+          getErrorMessage({ code: nativeEvent.statusCode, description: String(nativeEvent.statusCode) })
+        );
+      }}
+    />
+
+    {errorMessage && (
+      <View style={styles.errorOverlay}>
+        <Text style={styles.errorText}>{errorMessage}</Text>
+        <TouchableOpacity onPress={handleRetry} testID="webview-retry-button">
+          <Text style={styles.retryButton}>다시 시도</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+
+    {loading && !errorMessage && (
+      <View style={styles.loadingOverlay} pointerEvents="none">
+        <ActivityIndicator size="large" />
+      </View>
+    )}
+  </View>
+</SafeAreaView>
+```
+
+Add `webviewContainer: { flex: 1 }` to `styles`. The two changes inside this block:
+- `onLoadStart` now also calls `setErrorMessage(null)` — this is fix **2** below.
+- The loading overlay gains `pointerEvents="none"` — nothing inside it needs touch (just an `ActivityIndicator`), so this lets taps pass through to whatever's visually beneath (previously nothing was beneath it worth reaching; now that the header is a sibling outside this container, this specifically matters if the overlay ever visually overlapped anything interactive within the WebView area — harmless either way, but correct).
+
+**2. A failed page load can permanently trap a tab.** `errorMessage` was only ever cleared by `handleRetry`, and (before fix 1) the overlay also blocked the header, so a deterministic failure was unrecoverable without killing the app. `onLoadStart` now also clears `errorMessage` — combined with fix 1 making the header always reachable, any navigation (뒤로, 새로고침, or the page redirecting itself) now recovers automatically, and 뒤로 is never blocked as a manual escape hatch either.
+
+**3. Stale comment in `FIX_MYPAGE_LAYOUT_JS`.** The leading comment in `mobile/src/webview/injectedStyle.ts` still says "Override it to a single stacked column with the menu wrapping instead of overflowing" — true when first written, but the mechanism was changed to horizontal scrolling in a later fix (commit f78ebc7) and the comment was never updated. Change the comment's last sentence to: `// Override it to a single row with the menu scrolling horizontally instead of overflowing/cutting off.`
+
+**4. Logged-out users land on an unexplained blank homepage.** Confirmed directly against the live site: `/notice`, `/board`, `/faq`, and even `/member/logout` all respond to an anonymous/expired request with `alert('로그인이 필요합니다.'); location.replace('https://ondream.co.kr/')` — landing the user on the bare marketing homepage (whose own header we then also hide), with no indication of what happened or what to do next. Rather than fight the site's own hardcoded redirect target from inside the injected script (racy — the site's `location.replace` call isn't synchronously preemptable), detect the *result* of that redirect natively and correct it with a second, clean navigation:
+
+In `WebViewScreen.tsx`, add a module-level constant and update `handleNavigationStateChange`:
+
+```tsx
+const HOMEPAGE_URL = 'https://ondream.co.kr/';
+
+function handleNavigationStateChange(navState: WebViewNavigation) {
+  setCanGoBack(navState.canGoBack);
+  if (navState.url === HOMEPAGE_URL && url !== SECTION_URLS.account) {
+    webviewRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(SECTION_URLS.account)}; true;`);
+  }
+}
+```
+
+Any tab landing on the exact bare homepage — which only ever happens via this login-required/logged-out bounce, never as a deliberate destination in this app — gets redirected a second time straight to the real login form (`SECTION_URLS.account`) instead. The `url !== SECTION_URLS.account` guard prevents the Account tab from redirecting to itself if it ever lands on the homepage for an unrelated reason. `SUPPRESS_LOGIN_ALERTS_JS` is unchanged — both alert messages stay suppressed, since the resulting screen (the real login form, or real dashboard content) already communicates the login state clearly; a transient native alert box adds nothing beyond what lands on screen next.
+
+**5. Android hardware back button isn't wired to WebView history.** Pressing back inside a board post exits the app instead of navigating back a page. Add, in `WebViewScreen.tsx`:
+
+```tsx
+import { BackHandler } from 'react-native';
+import { useEffect } from 'react';
+import { useIsFocused } from '@react-navigation/native';
+```
+
+(add `useEffect` to the existing `import React, { useRef, useState } from 'react';` line rather than a separate import statement)
+
+```tsx
+const isFocused = useIsFocused();
+
+useEffect(() => {
+  const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+    if (isFocused && canGoBack) {
+      webviewRef.current?.goBack();
+      return true;
+    }
+    return false;
+  });
+  return () => subscription.remove();
+}, [isFocused, canGoBack]);
+```
+
+`useIsFocused` is required because `detachInactiveScreens={false}` (an earlier fix) keeps every tab's `WebViewScreen` mounted simultaneously — without checking focus, the hardware back press would be handled by whichever mounted tab's listener happens to run first with `canGoBack: true`, not necessarily the tab the user is actually looking at. `BackHandler.addEventListener` is an Android-only concern in practice (the event never fires on iOS), so no `Platform.OS` guard is needed.
+
+**Tests:** no new automated tests for fixes 1, 3, 4 (structural/comment/native-back-button changes, consistent with this project's existing pattern of not unit-testing WebView/DOM or native-API behavior). For fix 4 (login redirect), add one test to `mobile/src/screens/__tests__/WebViewScreen.test.tsx` matching the file's existing conventions:
+
+```tsx
+it('redirects to the account url when the webview bounces to the bare homepage', async () => {
+  const { } = await render(<WebViewScreen url="https://example.com" />);
+
+  await act(async () => {
+    capturedOnNavigationStateChange?.({ url: 'https://ondream.co.kr/', canGoBack: false });
+  });
+
+  expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
+  expect(mockInjectJavaScript.mock.calls[0][0]).toContain('https://ondream.co.kr/member/login');
+});
+```
+
+This requires capturing `onNavigationStateChange` from the mocked `WebView` the same way the file already captures `onError` as `capturedOnError` — add a matching `capturedOnNavigationStateChange` in the mock setup.
+
+Run `npm test` to confirm the full suite passes (10 existing tests + 1 new = 11). Manually verify on both platforms: confirm the header stays tappable during a slow page load and during an error state; confirm a deliberately-broken URL's error clears automatically after tapping 새로고침 or 뒤로; confirm logging out (via 로그아웃) lands on the real login form, not a blank page; confirm on Android that pressing the hardware back button while inside a board post navigates back within that tab instead of exiting the app.
+
+Commit as its own commit (Conventional Commits, no AI attribution), e.g. `fix: scope overlays to webview area, recover from errors, redirect login bounces, wire android back button`.
 
 ---
 

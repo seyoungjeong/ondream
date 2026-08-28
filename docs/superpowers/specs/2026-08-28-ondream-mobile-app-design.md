@@ -78,23 +78,42 @@ This architecture was chosen over two alternatives after discussion:
 
 ## 5. Screens & Navigation
 
-Bottom tab bar, 5 tabs:
+Bottom tab bar, 5 tabs, in this order:
 
+- **나의 ON드림 (Account)** — native header + WebView of the login/dashboard flow;
+  the site's own URL adapts automatically (login form when logged out, dashboard
+  when logged in), so this doubles as the app's home/landing tab and is first in
+  the tab order.
 - **Notices** — native header + WebView of the notices section.
 - **Board** — native header + WebView of the board section (list, post detail,
   write, comment all handled within the WebView via the site's own pages).
 - **FAQ** — native header + WebView of the FAQ section.
 - **Counseling** — fully native: 1388 hotline info and tap-to-call button.
-- **My Account** — native header + WebView of login/signup/profile pages.
 
-Each WebView-backed tab has a thin native header with a back button (wired to the
-WebView's own navigation history), a home button (returns to that tab's starting
-page — needed because chrome-hiding removes the site's own clickable logo/home
-link), and pull-to-refresh.
+Each WebView-backed tab has a thin native header (with the ON드림 wordmark logo)
+and three actions: 뒤로 (back, wired to the WebView's own navigation history),
+새로고침 (refresh), and 로그아웃 (logout — the site's only logout link lives in its
+own top nav, which this app hides, so a native equivalent is required). An earlier
+draft of this design included a home button and pull-to-refresh; the home button
+was removed once the account tab became the default/first tab (making it
+redundant), and pull-to-refresh was never implemented — 새로고침 covers the same
+need via an explicit tap.
 
-**Optional polish:** inject CSS/JS into each WebView to hide the website's own
-header/footer/nav bar, since the app's native tab bar already provides navigation
-— avoids showing two stacked navigation layers.
+Live testing surfaced two further mechanisms beyond the original chrome-hiding
+idea, injected alongside it:
+- The account dashboard's own CSS is a fixed-width desktop sidebar layout with no
+  responsive breakpoint, cutting off menu items on a phone-width WebView — an
+  injected style override makes it scroll horizontally on one row instead.
+- The site alerts and redirects to a blank, unexplained homepage when a page
+  requires login and the user is logged out (or just logged out) — login-related
+  alert popups are suppressed, and the app detects the resulting bounce to the
+  bare homepage and redirects a second time to the real login form instead.
+
+**Chrome-hiding:** inject CSS/JS into each WebView to hide the website's own
+header/footer, since the app's native tab bar and header already provide
+navigation — avoids showing two stacked navigation layers. Deliberately does not
+target the site's other `nav` elements (e.g. the dashboard sidebar above), since
+those carry real in-page content, not just redundant site-wide navigation.
 
 ## 6. Data Flow & Error Handling
 
