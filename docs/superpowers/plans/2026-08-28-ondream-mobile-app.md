@@ -154,7 +154,7 @@ import { View, Text } from 'react-native';
 export default function AccountScreen() {
   return (
     <View>
-      <Text>마이페이지</Text>
+      <Text>나의 ON드림</Text>
     </View>
   );
 }
@@ -180,11 +180,11 @@ export default function RootTabs() {
   return (
     <NavigationContainer>
       <Tab.Navigator screenOptions={{ headerShown: false, tabBarIcon: () => null }}>
+        <Tab.Screen name="Account" component={AccountScreen} options={{ tabBarLabel: '나의 ON드림' }} />
         <Tab.Screen name="Notices" component={NoticesScreen} options={{ tabBarLabel: '공지사항' }} />
         <Tab.Screen name="Board" component={BoardScreen} options={{ tabBarLabel: '게시판' }} />
         <Tab.Screen name="FAQ" component={FaqScreen} options={{ tabBarLabel: '자주 묻는 질문' }} />
         <Tab.Screen name="Counseling" component={CounselingScreen} options={{ tabBarLabel: '상담' }} />
-        <Tab.Screen name="Account" component={AccountScreen} options={{ tabBarLabel: '마이페이지' }} />
       </Tab.Navigator>
     </NavigationContainer>
   );
@@ -192,6 +192,8 @@ export default function RootTabs() {
 ```
 
 Route `name` values (`Notices`, `Board`, `FAQ`, `Counseling`, `Account`) are internal identifiers used by the navigator and by later tasks/tests — they stay in English. `tabBarLabel` controls what the user actually sees and must be Korean.
+
+**Why `Account` is first and labeled 나의 ON드림 (not 마이페이지):** the account/dashboard tab is the default tab shown on launch (React Navigation selects the first `Tab.Screen` by default), and its real URL (`SECTION_URLS.account`, the site's root-adjacent login/dashboard flow) already adapts automatically — anonymous visitors see the login screen, authenticated visitors land in their dashboard — so it functions as the app's true home/landing screen without needing a separate 홈 tab. The label matches the real website's own top-nav text for this section ("나의 ON드림"), not an app-invented name.
 
 `tabBarIcon: () => null` is required, not optional: without it, React Navigation's default bottom tab bar still reserves an icon slot and renders a fallback glyph that shows as a broken/missing-character box on both iOS and Android in this project's setup. This app is a text-only tab bar by design (Korean labels only), so the icon slot is disabled outright rather than filled with an icon.
 
@@ -215,7 +217,7 @@ export default function App() {
 
 - [ ] **Step 5: Manually verify**
 
-Run `npx expo start`, reload on both the iPhone (Expo Go) and the Android emulator. Confirm all 5 tabs appear in the bottom bar in this order with Korean labels — 공지사항, 게시판, 자주 묻는 질문, 상담, 마이페이지 — and tapping each shows its placeholder text.
+Run `npx expo start`, reload on both the iPhone (Expo Go) and the Android emulator. Confirm all 5 tabs appear in the bottom bar in this order with Korean labels — 나의 ON드림, 공지사항, 게시판, 자주 묻는 질문, 상담 — and tapping each shows its placeholder text.
 
 - [ ] **Step 6: Commit**
 
