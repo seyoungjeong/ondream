@@ -955,6 +955,8 @@ eas build --platform android --profile preview
 
 This does not require a paid Google Play or Apple Developer account. When it finishes, download the resulting `.apk` and install it on the Android emulator (drag the file onto the emulator window, or run `adb install <path-to-apk>`). Confirm the installed app launches and behaves the same as the Expo Go version.
 
+This build is also the first opportunity to see the real configured splash screen and app icon — Expo Go never renders `app.json`'s `splash`/`icon` config; it shows its own generic loading UI instead (a blank white screen with a "Bundling…" progress bar on Android, a placeholder blue-arrow icon on iOS). Launch the freshly installed app fresh (force-stop it first if it was already running) and confirm the real ON-mark logo appears on the splash screen with a white background, and the installed app's launcher icon is the real logo, not a default Expo icon.
+
 - [ ] **Step 5: Commit**
 
 ```bash
