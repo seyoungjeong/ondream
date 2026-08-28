@@ -416,6 +416,29 @@ export const FIX_MYPAGE_LAYOUT_JS = `
   })();
   true;
 `;
+
+// Suppresses window.alert() popups whose message is about login state
+// (e.g. "이미 로그인 중입니다" when revisiting the login page while already
+// authenticated, or "로그인이 필요합니다" when a page requires login).
+// Every observed case is immediately followed by a redirect that fully
+// explains what happened, so the native alert dialog is just an
+// unnecessary interruption, not a loss of information. Only messages
+// containing "로그인" are suppressed -- other alerts (e.g. form
+// validation) still show normally. Must run via
+// injectedJavaScriptBeforeContentLoaded, not the regular
+// injectedJavaScript prop: the site's own alert() calls fire as soon as
+// its scripts execute, before injectedJavaScript's post-load timing
+// would have a chance to override window.alert.
+export const SUPPRESS_LOGIN_ALERTS_JS = `
+  var nativeAlert = window.alert;
+  window.alert = function (message) {
+    if (typeof message === 'string' && message.indexOf('로그인') !== -1) {
+      return;
+    }
+    return nativeAlert(message);
+  };
+  true;
+`;
 ```
 
 - [ ] **Step 2: Write the failing test**
@@ -491,7 +514,7 @@ import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { getErrorMessage } from '../webview/errorMessage';
-import { HIDE_CHROME_JS, FIX_MYPAGE_LAYOUT_JS } from '../webview/injectedStyle';
+import { HIDE_CHROME_JS, FIX_MYPAGE_LAYOUT_JS, SUPPRESS_LOGIN_ALERTS_JS } from '../webview/injectedStyle';
 
 type Props = {
   url: string;
@@ -539,6 +562,7 @@ export default function WebViewScreen({ url }: Props) {
         ref={webviewRef}
         source={{ uri: url }}
         injectedJavaScript={HIDE_CHROME_JS + FIX_MYPAGE_LAYOUT_JS}
+        injectedJavaScriptBeforeContentLoaded={SUPPRESS_LOGIN_ALERTS_JS}
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => {
@@ -619,6 +643,8 @@ const styles = StyleSheet.create({
 **Why there's no 홈 (home) button:** an earlier version of this plan added one (returning to a tab's starting page via `injectJavaScript`), to work around the chrome-hiding script removing the site's own clickable logo. It was removed after live testing: with the account/dashboard tab now the app's default first tab (see Task 2), and 뒤로 already covering in-tab back-navigation, a separate home button was judged redundant. `webviewRef.current?.injectJavaScript` is still used elsewhere in this component (re-applying `HIDE_CHROME_JS` on every page load, see below) — only the home-button-specific call was removed.
 
 **Why `FIX_MYPAGE_LAYOUT_JS` exists:** fetched the real authenticated dashboard HTML/CSS and found `.mypage_section` is a fixed two-column desktop layout (`.mypage_header` sidebar pinned to 240px, `.mypage_body` content taking the remainder) with no responsive breakpoint — on a phone-width WebView the sidebar's menu items get cut off with no way to reach items past what fits (심리 검사, 내 정보 수정 had no other path). This is a real gap in the site's own mobile support, not something introduced by this app; the fix overrides the layout to a single stacked column with the menu wrapping instead of overflowing. Injected and re-injected alongside `HIDE_CHROME_JS` (same reasoning: `injectedJavaScript` alone doesn't reliably reapply across navigations on iOS).
+
+**Why `SUPPRESS_LOGIN_ALERTS_JS` uses `injectedJavaScriptBeforeContentLoaded`, not `injectedJavaScript`:** live testing found a native `이미 로그인 중입니다` (already logging in) alert popping up when revisiting the login page with an existing session — confirmed on both iOS and Android. This is the site's own script calling `alert()` as soon as the page's own JS runs, which happens before `injectedJavaScript`'s post-load timing would get a chance to override `window.alert`. `injectedJavaScriptBeforeContentLoaded` runs earlier (before the page's own scripts execute) and, unlike `injectedJavaScript`, reliably re-fires on every navigation on both platforms — no `onLoadEnd` re-injection needed for this one.
 
 **Why `onLoadEnd` re-injects `HIDE_CHROME_JS`:** the `injectedJavaScript` prop only reliably reapplies after every navigation on Android — on iOS (WKWebView) it only fires on the WebView's very first page load. Without this, any subsequent navigation within the same WebView (opening a notice, a login redirect, following a link) leaves the real site's own header visible again, duplicated below the app's native header. Re-running the same script imperatively from `onLoadEnd` makes it reapply after every page load on both platforms; it's idempotent (hiding an already-hidden element is a no-op) so this is safe to call after every load, not just the first.
 
