@@ -243,8 +243,10 @@ git commit -m "feat: add bottom tab navigation shell"
 ```bash
 cd mobile
 npx expo install jest-expo jest @types/jest
-npm install --save-dev @testing-library/react-native react-test-renderer
+npm install --save-dev @testing-library/react-native react-test-renderer@19.2.3
 ```
+
+`react-test-renderer` must be pinned to the exact same version as the `react` dependency (`19.2.3`, matching this Expo SDK version) rather than left as a floating range. A floating range can resolve to a `react-test-renderer` version whose peer dependency requires a newer `react` than Expo's scaffold pins — this passes locally (existing `node_modules`/lockfile already resolved) but fails with an ERESOLVE error on a clean install, such as an EAS Build.
 
 - [ ] **Step 2: Configure Jest**
 
