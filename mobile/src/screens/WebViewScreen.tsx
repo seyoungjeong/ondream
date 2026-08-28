@@ -60,7 +60,10 @@ export default function WebViewScreen({ url }: Props) {
         injectedJavaScript={HIDE_CHROME_JS}
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => setLoading(false)}
+        onLoadEnd={() => {
+          setLoading(false);
+          webviewRef.current?.injectJavaScript(HIDE_CHROME_JS);
+        }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           setErrorMessage(getErrorMessage({ code: nativeEvent.code, description: nativeEvent.description }));
