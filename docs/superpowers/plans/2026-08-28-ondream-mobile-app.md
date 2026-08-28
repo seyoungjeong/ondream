@@ -339,9 +339,12 @@ export const SECTION_URLS = {
   notices: 'https://ondream.co.kr/notice',
   board: 'https://ondream.co.kr/board',
   faq: 'https://ondream.co.kr/faq',
-  account: 'https://ondream.co.kr/',
+  account: 'https://ondream.co.kr/member/login',
+  logout: 'https://ondream.co.kr/member/logout',
 } as const;
 ```
+
+(`account` shown here already reflects Task 6's later fix — the site root has no login form, `/member/login` does. `logout` was added afterward, see the rationale near `handleLogout` below.)
 
 - [ ] **Step 8: Commit**
 
@@ -493,8 +496,19 @@ describe('WebViewScreen', () => {
 
     expect(getByTestId('webview-header-logo')).toBeTruthy();
   });
+
+  it('navigates to the logout url when the logout button is pressed', () => {
+    const { getByTestId } = render(<WebViewScreen url="https://example.com" />);
+
+    fireEvent.press(getByTestId('webview-logout-button'));
+
+    expect(injectJavaScriptMock).toHaveBeenCalledTimes(1);
+    expect(injectJavaScriptMock.mock.calls[0][0]).toContain('https://ondream.co.kr/member/logout');
+  });
 });
 ```
+
+(The live test file has since renamed `injectJavaScriptMock`/`reloadMock` to `mockInjectJavaScript`/`mockReload`, and uses `async`/`await render(...)` — match whatever the current file already does, this snippet just shows the assertion shape.)
 
 - [ ] **Step 3: Run the test and verify it fails**
 
@@ -515,6 +529,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { getErrorMessage } from '../webview/errorMessage';
 import { HIDE_CHROME_JS, FIX_MYPAGE_LAYOUT_JS, SUPPRESS_LOGIN_ALERTS_JS } from '../webview/injectedStyle';
+import { SECTION_URLS } from '../constants/urls';
 
 type Props = {
   url: string;
@@ -533,6 +548,10 @@ export default function WebViewScreen({ url }: Props) {
   function handleRetry() {
     setErrorMessage(null);
     webviewRef.current?.reload();
+  }
+
+  function handleLogout() {
+    webviewRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(SECTION_URLS.logout)}; true;`);
   }
 
   return (
@@ -554,6 +573,9 @@ export default function WebViewScreen({ url }: Props) {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
             <Text style={styles.headerButton}>새로고침</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} testID="webview-logout-button">
+            <Text style={styles.headerButton}>로그아웃</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -643,6 +665,8 @@ const styles = StyleSheet.create({
 **Why there's no 홈 (home) button:** an earlier version of this plan added one (returning to a tab's starting page via `injectJavaScript`), to work around the chrome-hiding script removing the site's own clickable logo. It was removed after live testing: with the account/dashboard tab now the app's default first tab (see Task 2), and 뒤로 already covering in-tab back-navigation, a separate home button was judged redundant. `webviewRef.current?.injectJavaScript` is still used elsewhere in this component (re-applying `HIDE_CHROME_JS` on every page load, see below) — only the home-button-specific call was removed.
 
 **Why `FIX_MYPAGE_LAYOUT_JS` exists:** fetched the real authenticated dashboard HTML/CSS and found `.mypage_section` is a fixed two-column desktop layout (`.mypage_header` sidebar pinned to 240px, `.mypage_body` content taking the remainder) with no responsive breakpoint — on a phone-width WebView the sidebar's menu items get cut off with no way to reach items past what fits (심리 검사, 내 정보 수정 had no other path). This is a real gap in the site's own mobile support, not something introduced by this app; the fix overrides the layout to a single stacked column with the menu wrapping instead of overflowing. Injected and re-injected alongside `HIDE_CHROME_JS` (same reasoning: `injectedJavaScript` alone doesn't reliably reapply across navigations on iOS).
+
+**Why there's a 로그아웃 (logout) button:** the real website's only logout link lives in its top nav, which is nested inside `<header>` and deliberately hidden (see `HIDE_CHROME_JS`) — leaving no way to log out anywhere in the app. `handleLogout` navigates to `SECTION_URLS.logout` (`https://ondream.co.kr/member/logout`) via `injectJavaScript`, same mechanism as the removed home button. Available on every WebView-backed tab, matching how the real site's persistent top nav shows 로그아웃 on every page, not just the account tab.
 
 **Why `SUPPRESS_LOGIN_ALERTS_JS` uses `injectedJavaScriptBeforeContentLoaded`, not `injectedJavaScript`:** live testing found a native `이미 로그인 중입니다` (already logging in) alert popping up when revisiting the login page with an existing session — confirmed on both iOS and Android. This is the site's own script calling `alert()` as soon as the page's own JS runs, which happens before `injectedJavaScript`'s post-load timing would get a chance to override `window.alert`. `injectedJavaScriptBeforeContentLoaded` runs earlier (before the page's own scripts execute) and, unlike `injectedJavaScript`, reliably re-fires on every navigation on both platforms — no `onLoadEnd` re-injection needed for this one.
 
