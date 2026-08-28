@@ -12,3 +12,37 @@ export const HIDE_CHROME_JS = `
   })();
   true;
 `;
+
+// The account/dashboard pages (.mypage_section) use a fixed-width
+// desktop sidebar layout (.mypage_header, 240px) next to a content
+// column (.mypage_body) with no responsive breakpoint for narrow
+// screens, so the sidebar's menu items overflow and get cut off.
+// Override it to a single stacked column with the menu wrapping
+// instead of overflowing. No-op (every querySelector finds nothing)
+// on pages that don't have this layout.
+export const FIX_MYPAGE_LAYOUT_JS = `
+  (function () {
+    var section = document.querySelector('.mypage_section');
+    if (section) { section.style.display = 'block'; }
+    var header = document.querySelector('.mypage_header');
+    if (header) {
+      header.style.width = '100%';
+      header.style.minWidth = '0';
+    }
+    var nav = document.querySelector('.mypage_header nav ul');
+    if (nav) {
+      nav.style.display = 'flex';
+      nav.style.flexWrap = 'wrap';
+      nav.style.gap = '12px 16px';
+    }
+    document.querySelectorAll('.mypage_header nav li').forEach(function (li) {
+      li.style.marginTop = '0';
+    });
+    var body = document.querySelector('.mypage_body');
+    if (body) {
+      body.style.width = '100%';
+      body.style.paddingLeft = '0';
+    }
+  })();
+  true;
+`;

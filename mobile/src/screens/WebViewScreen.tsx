@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { getErrorMessage } from '../webview/errorMessage';
-import { HIDE_CHROME_JS } from '../webview/injectedStyle';
+import { HIDE_CHROME_JS, FIX_MYPAGE_LAYOUT_JS } from '../webview/injectedStyle';
 
 type Props = {
   url: string;
@@ -50,12 +50,13 @@ export default function WebViewScreen({ url }: Props) {
       <WebView
         ref={webviewRef}
         source={{ uri: url }}
-        injectedJavaScript={HIDE_CHROME_JS}
+        injectedJavaScript={HIDE_CHROME_JS + FIX_MYPAGE_LAYOUT_JS}
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => {
           setLoading(false);
           webviewRef.current?.injectJavaScript(HIDE_CHROME_JS);
+          webviewRef.current?.injectJavaScript(FIX_MYPAGE_LAYOUT_JS);
         }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
