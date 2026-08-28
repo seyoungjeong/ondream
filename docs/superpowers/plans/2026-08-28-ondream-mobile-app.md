@@ -179,7 +179,7 @@ const Tab = createBottomTabNavigator();
 export default function RootTabs() {
   return (
     <NavigationContainer>
-      <Tab.Navigator screenOptions={{ headerShown: false }}>
+      <Tab.Navigator screenOptions={{ headerShown: false, tabBarIcon: () => null }}>
         <Tab.Screen name="Notices" component={NoticesScreen} options={{ tabBarLabel: '공지사항' }} />
         <Tab.Screen name="Board" component={BoardScreen} options={{ tabBarLabel: '게시판' }} />
         <Tab.Screen name="FAQ" component={FaqScreen} options={{ tabBarLabel: '자주 묻는 질문' }} />
@@ -192,6 +192,8 @@ export default function RootTabs() {
 ```
 
 Route `name` values (`Notices`, `Board`, `FAQ`, `Counseling`, `Account`) are internal identifiers used by the navigator and by later tasks/tests — they stay in English. `tabBarLabel` controls what the user actually sees and must be Korean.
+
+`tabBarIcon: () => null` is required, not optional: without it, React Navigation's default bottom tab bar still reserves an icon slot and renders a fallback glyph that shows as a broken/missing-character box on both iOS and Android in this project's setup. This app is a text-only tab bar by design (Korean labels only), so the icon slot is disabled outright rather than filled with an icon.
 
 - [ ] **Step 4: Wire it into the app entry point**
 
