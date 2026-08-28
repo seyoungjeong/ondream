@@ -12,6 +12,7 @@
 
 - Strict typing everywhere — Expo's TypeScript template ships `"strict": true` in `tsconfig.json`; do not weaken it.
 - Comments: English only, as short as possible, plain ASCII only (no emoji/icons).
+- All user-facing UI text (tab labels, header buttons, error messages, the Counseling screen) must be in Korean — the app's audience is Korean youth. This applies only to natively-built copy; the WebView-backed tabs already show the real Korean website and need no translation. Code comments stay English/ASCII regardless.
 - Prefer pure functions; minimize side effects.
 - No unrequested fallbacks or error-hiding catch-alls; never silently swallow errors.
 - Keep diffs small — change only what the current task requires.
@@ -93,7 +94,7 @@ import { View, Text } from 'react-native';
 export default function NoticesScreen() {
   return (
     <View>
-      <Text>Notices</Text>
+      <Text>공지사항</Text>
     </View>
   );
 }
@@ -108,7 +109,7 @@ import { View, Text } from 'react-native';
 export default function BoardScreen() {
   return (
     <View>
-      <Text>Board</Text>
+      <Text>게시판</Text>
     </View>
   );
 }
@@ -123,7 +124,7 @@ import { View, Text } from 'react-native';
 export default function FaqScreen() {
   return (
     <View>
-      <Text>FAQ</Text>
+      <Text>자주 묻는 질문</Text>
     </View>
   );
 }
@@ -138,7 +139,7 @@ import { View, Text } from 'react-native';
 export default function CounselingScreen() {
   return (
     <View>
-      <Text>Counseling</Text>
+      <Text>상담</Text>
     </View>
   );
 }
@@ -153,7 +154,7 @@ import { View, Text } from 'react-native';
 export default function AccountScreen() {
   return (
     <View>
-      <Text>My Account</Text>
+      <Text>마이페이지</Text>
     </View>
   );
 }
@@ -179,16 +180,18 @@ export default function RootTabs() {
   return (
     <NavigationContainer>
       <Tab.Navigator screenOptions={{ headerShown: false }}>
-        <Tab.Screen name="Notices" component={NoticesScreen} />
-        <Tab.Screen name="Board" component={BoardScreen} />
-        <Tab.Screen name="FAQ" component={FaqScreen} />
-        <Tab.Screen name="Counseling" component={CounselingScreen} />
-        <Tab.Screen name="My Account" component={AccountScreen} />
+        <Tab.Screen name="Notices" component={NoticesScreen} options={{ tabBarLabel: '공지사항' }} />
+        <Tab.Screen name="Board" component={BoardScreen} options={{ tabBarLabel: '게시판' }} />
+        <Tab.Screen name="FAQ" component={FaqScreen} options={{ tabBarLabel: '자주 묻는 질문' }} />
+        <Tab.Screen name="Counseling" component={CounselingScreen} options={{ tabBarLabel: '상담' }} />
+        <Tab.Screen name="Account" component={AccountScreen} options={{ tabBarLabel: '마이페이지' }} />
       </Tab.Navigator>
     </NavigationContainer>
   );
 }
 ```
+
+Route `name` values (`Notices`, `Board`, `FAQ`, `Counseling`, `Account`) are internal identifiers used by the navigator and by later tasks/tests — they stay in English. `tabBarLabel` controls what the user actually sees and must be Korean.
 
 - [ ] **Step 4: Wire it into the app entry point**
 
@@ -210,7 +213,7 @@ export default function App() {
 
 - [ ] **Step 5: Manually verify**
 
-Run `npx expo start`, reload on both the iPhone (Expo Go) and the Android emulator. Confirm all 5 tabs appear in the bottom bar in this order — Notices, Board, FAQ, Counseling, My Account — and tapping each shows its placeholder label.
+Run `npx expo start`, reload on both the iPhone (Expo Go) and the Android emulator. Confirm all 5 tabs appear in the bottom bar in this order with Korean labels — 공지사항, 게시판, 자주 묻는 질문, 상담, 마이페이지 — and tapping each shows its placeholder text.
 
 - [ ] **Step 6: Commit**
 
@@ -270,7 +273,7 @@ describe('getErrorMessage', () => {
       description: 'net::ERR_INTERNET_DISCONNECTED',
     });
 
-    expect(message).toBe('No internet connection. Check your network and try again.');
+    expect(message).toBe('인터넷 연결이 없습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요.');
   });
 
   it('returns a generic message for other errors', () => {
@@ -279,7 +282,7 @@ describe('getErrorMessage', () => {
       description: 'net::ERR_FILE_NOT_FOUND',
     });
 
-    expect(message).toBe('This page could not be loaded. Please try again.');
+    expect(message).toBe('페이지를 불러올 수 없습니다. 다시 시도해 주세요.');
   });
 });
 ```
@@ -306,10 +309,10 @@ export function getErrorMessage(error: WebViewErrorInfo): string {
   const looksOffline = error.code === -2 || error.description.toLowerCase().includes('disconnected');
 
   if (looksOffline) {
-    return 'No internet connection. Check your network and try again.';
+    return '인터넷 연결이 없습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요.';
   }
 
-  return 'This page could not be loaded. Please try again.';
+  return '페이지를 불러올 수 없습니다. 다시 시도해 주세요.';
 }
 ```
 
@@ -408,7 +411,7 @@ describe('WebViewScreen', () => {
       nativeEvent: { code: -2, description: 'net::ERR_INTERNET_DISCONNECTED' },
     });
 
-    expect(getByText('No internet connection. Check your network and try again.')).toBeTruthy();
+    expect(getByText('인터넷 연결이 없습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요.')).toBeTruthy();
 
     fireEvent.press(getByTestId('webview-retry-button'));
 
@@ -464,10 +467,10 @@ export default function WebViewScreen({ url }: Props) {
           disabled={!canGoBack}
           testID="webview-back-button"
         >
-          <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>Back</Text>
+          <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>뒤로</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
-          <Text style={styles.headerButton}>Refresh</Text>
+          <Text style={styles.headerButton}>새로고침</Text>
         </TouchableOpacity>
       </View>
 
@@ -475,7 +478,7 @@ export default function WebViewScreen({ url }: Props) {
         <View style={styles.centered}>
           <Text style={styles.errorText}>{errorMessage}</Text>
           <TouchableOpacity onPress={handleRetry} testID="webview-retry-button">
-            <Text style={styles.retryButton}>Retry</Text>
+            <Text style={styles.retryButton}>다시 시도</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -602,14 +605,14 @@ const HOTLINE_NUMBER = '1388';
 export default function CounselingScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Youth Counseling Hotline</Text>
-      <Text style={styles.description}>Call 1388 anytime for free, confidential counseling support.</Text>
+      <Text style={styles.title}>청소년 상담 전화</Text>
+      <Text style={styles.description}>1388로 언제든지 무료 상담을 받을 수 있습니다.</Text>
       <TouchableOpacity
         style={styles.callButton}
         onPress={() => Linking.openURL(`tel:${HOTLINE_NUMBER}`)}
         testID="counseling-call-button"
       >
-        <Text style={styles.callButtonText}>Call 1388</Text>
+        <Text style={styles.callButtonText}>1388 전화하기</Text>
       </TouchableOpacity>
     </View>
   );
@@ -802,7 +805,7 @@ Expected: PASS (4 suites).
 
 - [ ] **Step 5: Manually verify the full app**
 
-Run `npx expo start`, reload on the iPhone (Expo Go) and Android emulator. For each of Notices, Board, FAQ, and My Account: confirm the real ondream.co.kr page loads, the header/footer/nav from the site itself is hidden, the native back button is disabled until you navigate into a page (e.g. open a board post) and then works, and pull never shows a stuck spinner. On Counseling, confirm tapping "Call 1388" opens the phone dialer (iPhone) or the emulator's dialer prompt (Android). If the My Account tab does not show the login form as expected, update `SECTION_URLS.account` in `mobile/src/constants/urls.ts` to the correct URL and re-run this verification.
+Run `npx expo start`, reload on the iPhone (Expo Go) and Android emulator. For each of Notices, Board, FAQ, and My Account: confirm the real ondream.co.kr page loads, the header/footer/nav from the site itself is hidden, the native back button is disabled until you navigate into a page (e.g. open a board post) and then works, and pull never shows a stuck spinner. On Counseling, confirm tapping "1388 전화하기" opens the phone dialer (iPhone) or the emulator's dialer prompt (Android). If the My Account tab does not show the login form as expected, update `SECTION_URLS.account` in `mobile/src/constants/urls.ts` to the correct URL and re-run this verification.
 
 - [ ] **Step 6: Commit**
 

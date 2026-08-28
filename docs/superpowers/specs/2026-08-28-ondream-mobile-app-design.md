@@ -107,6 +107,13 @@ like the same trusted institution, restyled with native mobile patterns (tab bar
 native headers). Exact brand colors/assets to be extracted from the website during
 implementation.
 
+**Language:** the app's audience is Korean youth, so all natively-built UI text
+(tab labels, header buttons, error messages, the Counseling screen) must be in
+Korean. This does not require any extra work for the WebView-backed tabs
+(Notices, Board, FAQ, My Account) since they render the real ondream.co.kr pages,
+which are already in Korean. Code comments remain English/ASCII per the global
+engineering conventions — this requirement is about user-facing copy only.
+
 ## 8. Testing Approach
 
 The app has very little custom logic (mostly native shell + WebView wiring), so
