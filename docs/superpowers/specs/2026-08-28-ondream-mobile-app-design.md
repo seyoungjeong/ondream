@@ -88,7 +88,9 @@ Bottom tab bar, 5 tabs:
 - **My Account** — native header + WebView of login/signup/profile pages.
 
 Each WebView-backed tab has a thin native header with a back button (wired to the
-WebView's own navigation history) and pull-to-refresh.
+WebView's own navigation history), a home button (returns to that tab's starting
+page — needed because chrome-hiding removes the site's own clickable logo/home
+link), and pull-to-refresh.
 
 **Optional polish:** inject CSS/JS into each WebView to hide the website's own
 header/footer/nav bar, since the app's native tab bar already provides navigation
@@ -130,10 +132,20 @@ this architecture.
   flag apps perceived as bare website wrappers. Mitigated by the native tab bar,
   the fully native Counseling screen, and header/footer injection making the app
   feel purpose-built rather than a browser wrapper.
-- **Unverified page structure:** only the public homepage has been inspected so
-  far (via an automated fetch). The board, login, signup, and FAQ pages have not
-  been navigated or confirmed to render acceptably inside a WebView on a mobile
-  viewport. This should be checked early during implementation.
+- **Notices/Board/FAQ require login.** Confirmed directly against the live site
+  (including with a fresh session cookie, bypassing the app entirely): anonymous
+  requests to `/notice`, `/board`, and `/faq` all return a script that alerts
+  "로그인이 필요합니다" (login required) and redirects to the site root — not the
+  publicly browsable content originally assumed during brainstorming. The app's
+  behavior correctly mirrors this; a user must log in (My Account tab) before
+  these tabs show real content, since the WebView shares session cookies with
+  the same domain across all tabs.
+- **Chrome-hiding is not fully reliable across navigations.** Confirmed on iOS:
+  the injected chrome-hiding script ran on a tab's initial page load but not
+  after an in-page redirect (e.g. the login-required redirect above) to a new
+  page within the same WebView instance — the site's own header briefly
+  reappeared. Already noted as "optional polish" rather than a hard requirement;
+  this is a known limitation, not a blocking defect.
 
 ## 10. Non-Goals / Future Work
 

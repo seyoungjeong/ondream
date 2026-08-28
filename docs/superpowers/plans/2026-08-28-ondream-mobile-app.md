@@ -385,6 +385,7 @@ import WebViewScreen from '../WebViewScreen';
 
 let capturedOnError: ((event: any) => void) | undefined;
 let reloadMock = jest.fn();
+let injectJavaScriptMock = jest.fn();
 
 jest.mock('react-native-webview', () => {
   const RN = require('react');
@@ -393,6 +394,7 @@ jest.mock('react-native-webview', () => {
     RN.useImperativeHandle(ref, () => ({
       reload: reloadMock,
       goBack: jest.fn(),
+      injectJavaScript: injectJavaScriptMock,
     }));
     return null;
   });
@@ -402,6 +404,7 @@ jest.mock('react-native-webview', () => {
 describe('WebViewScreen', () => {
   beforeEach(() => {
     reloadMock = jest.fn();
+    injectJavaScriptMock = jest.fn();
   });
 
   it('shows the error message and a working retry button after a load failure', () => {
@@ -416,6 +419,15 @@ describe('WebViewScreen', () => {
     fireEvent.press(getByTestId('webview-retry-button'));
 
     expect(reloadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates back to the starting url when the home button is pressed', () => {
+    const { getByTestId } = render(<WebViewScreen url="https://example.com/section" />);
+
+    fireEvent.press(getByTestId('webview-home-button'));
+
+    expect(injectJavaScriptMock).toHaveBeenCalledTimes(1);
+    expect(injectJavaScriptMock.mock.calls[0][0]).toContain('https://example.com/section');
   });
 });
 ```
@@ -459,6 +471,10 @@ export default function WebViewScreen({ url }: Props) {
     webviewRef.current?.reload();
   }
 
+  function handleHome() {
+    webviewRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(url)}; true;`);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -468,6 +484,9 @@ export default function WebViewScreen({ url }: Props) {
           testID="webview-back-button"
         >
           <Text style={[styles.headerButton, !canGoBack && styles.headerButtonDisabled]}>뒤로</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleHome} testID="webview-home-button">
+          <Text style={styles.headerButton}>홈</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
           <Text style={styles.headerButton}>새로고침</Text>
@@ -547,6 +566,8 @@ const styles = StyleSheet.create({
 ```
 
 **Why the WebView stays mounted:** if `<WebView>` were conditionally replaced by the error view (as an earlier draft of this plan did), `webviewRef.current` would go null while the error is showing, and the retry button's `webviewRef.current?.reload()` would silently no-op. Keeping `<WebView>` always mounted and overlaying the error UI on top (same pattern as the loading overlay) keeps the ref valid so retry actually works.
+
+**Why there's a 홈 (home) button:** the chrome-hiding script hides the real website's own header, which normally contains the clickable logo that navigates back to a section's starting page. Without a native equivalent, once a user navigates into a sub-page there is no way back except stepping through browser history one page at a time via 뒤로. `handleHome` uses `injectJavaScript` to run `window.location.href = <the tab's original url>` inside the existing WebView instance — this returns to that tab's starting page without unmounting/remounting the WebView (same reasoning as the retry fix above: never rely on replacing the WebView to change what it shows).
 
 - [ ] **Step 5: Run the test and verify it passes**
 
