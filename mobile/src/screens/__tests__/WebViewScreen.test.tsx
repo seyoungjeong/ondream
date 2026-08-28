@@ -47,4 +47,13 @@ describe('WebViewScreen', () => {
 
     expect(getByTestId('webview-header-logo')).toBeTruthy();
   });
+
+  it('navigates to the logout url when the logout button is pressed', async () => {
+    const { getByTestId } = await render(<WebViewScreen url="https://example.com" />);
+
+    await fireEvent.press(getByTestId('webview-logout-button'));
+
+    expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
+    expect(mockInjectJavaScript.mock.calls[0][0]).toContain('https://ondream.co.kr/member/logout');
+  });
 });

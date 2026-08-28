@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewNavigation } from 'react-native-webview';
 import { getErrorMessage } from '../webview/errorMessage';
 import { HIDE_CHROME_JS, FIX_MYPAGE_LAYOUT_JS, SUPPRESS_LOGIN_ALERTS_JS } from '../webview/injectedStyle';
+import { SECTION_URLS } from '../constants/urls';
 
 type Props = {
   url: string;
@@ -22,6 +23,10 @@ export default function WebViewScreen({ url }: Props) {
   function handleRetry() {
     setErrorMessage(null);
     webviewRef.current?.reload();
+  }
+
+  function handleLogout() {
+    webviewRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(SECTION_URLS.logout)}; true;`);
   }
 
   return (
@@ -43,6 +48,9 @@ export default function WebViewScreen({ url }: Props) {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => webviewRef.current?.reload()} testID="webview-refresh-button">
             <Text style={styles.headerButton}>새로고침</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} testID="webview-logout-button">
+            <Text style={styles.headerButton}>로그아웃</Text>
           </TouchableOpacity>
         </View>
       </View>
