@@ -517,7 +517,10 @@ export default function WebViewScreen({ url }: Props) {
         injectedJavaScript={HIDE_CHROME_JS}
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => setLoading(false)}
+        onLoadEnd={() => {
+          setLoading(false);
+          webviewRef.current?.injectJavaScript(HIDE_CHROME_JS);
+        }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           setErrorMessage(getErrorMessage({ code: nativeEvent.code, description: nativeEvent.description }));
@@ -589,6 +592,8 @@ const styles = StyleSheet.create({
 **Why the WebView stays mounted:** if `<WebView>` were conditionally replaced by the error view (as an earlier draft of this plan did), `webviewRef.current` would go null while the error is showing, and the retry button's `webviewRef.current?.reload()` would silently no-op. Keeping `<WebView>` always mounted and overlaying the error UI on top (same pattern as the loading overlay) keeps the ref valid so retry actually works.
 
 **Why there's a 홈 (home) button:** the chrome-hiding script hides the real website's own header, which normally contains the clickable logo that navigates back to a section's starting page. Without a native equivalent, once a user navigates into a sub-page there is no way back except stepping through browser history one page at a time via 뒤로. `handleHome` uses `injectJavaScript` to run `window.location.href = <the tab's original url>` inside the existing WebView instance — this returns to that tab's starting page without unmounting/remounting the WebView (same reasoning as the retry fix above: never rely on replacing the WebView to change what it shows).
+
+**Why `onLoadEnd` re-injects `HIDE_CHROME_JS`:** the `injectedJavaScript` prop only reliably reapplies after every navigation on Android — on iOS (WKWebView) it only fires on the WebView's very first page load. Without this, any subsequent navigation within the same WebView (opening a notice, a login redirect, following a link) leaves the real site's own header/footer/nav visible again, duplicated below the app's native header. Re-running the same script imperatively from `onLoadEnd` makes it reapply after every page load on both platforms; it's idempotent (hiding already-hidden elements is a no-op) so this is safe to call after every load, not just the first.
 
 **Why there's a header logo:** chrome-hiding is not fully reliable across in-page navigations (confirmed during live testing — the site's own header briefly reappears after certain redirects, inconsistently between iOS and Android). Rather than depend on that script working every time, the app shows its own ON드림 wordmark logo natively at the top-left of every WebView-backed screen's header, matching the real site's own header placement, so branding is consistent on both platforms regardless of what the injected script does or doesn't hide. The logo asset (`mobile/assets/header-logo.png`) is the real wordmark extracted from the live site's own header logo SVG (`https://ondream.co.kr/images/logo/header_logo.svg`, full lockup this time, not just the icon-only crop used for the app icon), rasterized at 660x180 with a transparent background — already prepared at `/tmp/ondream-wordmark.png`, ready to copy into place.
 
