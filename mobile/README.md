@@ -110,7 +110,15 @@ npm run typecheck # TypeScript 타입 검사
    `app.json`에 저장되어 있음)에 연결되어 있습니다. 같은 프로젝트에 접근하려면
    해당 Expo 팀(`sanjarak99s-team`)에 협업자로 초대받아야 합니다.
 
-### 빌드 실행
+### GitHub Actions로 빌드하기 (로컬 설치 없이)
+
+저장소 루트의 `.github/workflows/eas-build.yml`을 GitHub Actions 탭에서 수동으로
+실행하면, 로컬에 아무것도 설치하지 않고도 빌드를 시작할 수 있습니다. 최초 1회
+저장소 Settings → Secrets and variables → Actions에서 `EXPO_TOKEN` 시크릿을
+등록해야 합니다 (expo.dev 계정 설정 → Access Tokens에서 발급). 이후에는
+Actions 탭 → "EAS Build" → "Run workflow"에서 플랫폼과 프로필만 고르면 됩니다.
+
+### 로컬에서 빌드 실행
 
 ```bash
 # Android 테스트용 APK (무료 계정으로 가능, Play 스토어 계정 불필요)
