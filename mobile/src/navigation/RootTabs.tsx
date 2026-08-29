@@ -12,7 +12,10 @@ const Tab = createBottomTabNavigator();
 export default function RootTabs() {
   return (
     <NavigationContainer>
-      <Tab.Navigator screenOptions={{ headerShown: false, tabBarIcon: () => null }}>
+      <Tab.Navigator
+        screenOptions={{ headerShown: false, tabBarIcon: () => null }}
+        detachInactiveScreens={false}
+      >
         <Tab.Screen name="Account" component={AccountScreen} options={{ tabBarLabel: '나의 ON드림' }} />
         <Tab.Screen name="Notices" component={NoticesScreen} options={{ tabBarLabel: '공지사항' }} />
         <Tab.Screen name="Board" component={BoardScreen} options={{ tabBarLabel: '게시판' }} />
